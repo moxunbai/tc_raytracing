@@ -61,6 +61,9 @@ if __name__ == '__main__':
    floor = MeshTriangle("./models/cornellbox/floor.obj", white)
    light_ = MeshTriangle("./models/cornellbox/light.obj", light)
 
+   shortbox  = MeshTriangle("./models/cornellbox/shortbox.obj", white)
+   tallbox  = MeshTriangle("./models/cornellbox/tallbox.obj", white)
+
    # world
 
    scene = Scene()
@@ -74,6 +77,8 @@ if __name__ == '__main__':
    scene.add(spot)
    scene.add(right)
    scene.add(bunny)
+   # scene.add(shortbox)
+   # scene.add(tallbox)
 
    scene.commit()
 
