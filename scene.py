@@ -188,8 +188,8 @@ class Scene:
     @ti.func
     def hit_meshs(self,obj_box,ray_origin, ray_direction, t_min, t_max ):
         hit_anything = False
-        t_min = 0.0
-        closest_so_far = 999999.99
+
+        closest_so_far = t_max
 
         p = Point([0.0, 0.0, 0.0])
         n = Vector([0.0, 0.0, 0.0])
@@ -216,15 +216,13 @@ class Scene:
                 if mat_type!=2 and not _front_facing:
                     valid_face=False
                 if hit and valid_face:
-
-                    if _t<closest_so_far:
-                        hit_anything = True
-                        closest_so_far = _t
-                        t=_t
-                        p=_p
-                        n=_n
-                        front_facing=_front_facing
-                        hit_tri_index=_hit_tri_index
+                   hit_anything = True
+                   closest_so_far = _t
+                   t=_t
+                   p=_p
+                   n=_n
+                   front_facing=_front_facing
+                   hit_tri_index=_hit_tri_index
 
                 curr = next_id
             else:
@@ -269,10 +267,9 @@ class Scene:
         # print("hit1", hit)
         if hit:
 
-            t_tmp = 0.0
             pvec = ray_direction.cross( e2)
             det = e1.dot(pvec)
-            # print("det",det)
+
             if  abs(det) < EPSILON:
                 hit=False
             else:
@@ -310,14 +307,10 @@ class Scene:
                             #     print("nei bu ray_direction",ray_direction)
                             n = n if front_facing else -n
 
-
-        # if tri_idx==0 and hit:
-        #     print("hit_triangle ", obj_id)
-
         return hit, t, p, n, front_facing,hit_tri_index
 
     @ti.func
-    def hit_triangle(self,tria_id,obj_box,ray_origin, ray_direction, t_min,closest_so_far ):
+    def hit_triangle(self,tria_id,obj_box,ray_origin, ray_direction, t_min,t_max ):
         tria_start=obj_box.pos[0]
         hit_tri_index=tria_start+tria_id
         obj=self.triangles[hit_tri_index]
@@ -343,7 +336,7 @@ class Scene:
         else:
             det_inv=1.0/det
             t=s2.dot(e2)*det_inv
-            if t<=0:
+            if t<t_min or t_max<t:
                 hit = False
             else:
                 b1=s1.dot(s)*det_inv
@@ -387,14 +380,14 @@ class Scene:
                 root = (-half_b + sqrtd) / a
                 if root < t_min or t_max < root:
                     hit = False
-        # print("hit 2", hit)
+
         if hit:
             t=root
             p = ray.at(ray_origin, ray_direction, t)
             n = (p - center) / radius
             front_facing = is_front_facing(ray_direction, n)
             n = n if front_facing else -n
-        # print("hit_sphere",hit)
+
         return hit, t, p, n, front_facing
 
     @ti.func
@@ -422,19 +415,17 @@ class Scene:
                 hit, _t, _p, _n, _front_facing,_hit_tri_index = self.hit_obj(obj_id,
                                     ray_origin, ray_direction, t_min,
                                     closest_so_far)
-                # print("hit obj ",hit)
+
                 if hit:
                     hit_anything = True
-                    if _t<closest_so_far:
-                        closest_so_far = _t
-                        hit_index = obj_id
-                        n=_n
-                        p=_p
-                        front_facing=_front_facing
-                        hit_tri_index=_hit_tri_index
-                    # if obj_id==0:
-                    #     print("hit 0")
-                    # break
+
+                    closest_so_far = _t
+                    hit_index = obj_id
+                    n=_n
+                    p=_p
+                    front_facing=_front_facing
+                    hit_tri_index=_hit_tri_index
+
                 curr = next_id
             else:
                 if self.bvh.hit_aabb(curr, ray_origin, ray_direction, t_min,

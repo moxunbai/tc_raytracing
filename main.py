@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
    ti.root.dense(ti.ij,
                  (image_width, image_height)).place(film_pixels )
-   samples_per_pixel = 120
+   samples_per_pixel = 100
    max_depth = 10
 
    red = Lambert([0.65, .05, .05])
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
    scene = Scene()
 
-   scene.add(Sphere([210.0, 190.0, 290.0], 90.0, glass))
+   # scene.add(Sphere([210.0, 190.0, 290.0], 90.0, glass))
    # scene.add(Sphere([370.0, 310.0, 390.0], 90.0, white))
 
    scene.add(light_, 1)
