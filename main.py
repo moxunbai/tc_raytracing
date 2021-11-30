@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
    ti.root.dense(ti.ij,
                  (image_width, image_height)).place(film_pixels )
-   samples_per_pixel = 100
+   samples_per_pixel = 50
    max_depth = 10
 
    red = Lambert([0.65, .05, .05])
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
    moveVec2 = [155, 25, 125]
    trans2 = Translate(makeTransformations(910, math.pi, moveVec2))
-   bunny = MeshTriangle("./models/bunny/bunny.obj", white,trans2)
+   bunny = MeshTriangle("./models/bunny/bunny.obj", glass,trans2)
 
    left = MeshTriangle("./models/cornellbox/left.obj", red)
    right = MeshTriangle("./models/cornellbox/right.obj", green)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
    scene = Scene()
 
-   # scene.add(Sphere([210.0, 190.0, 290.0], 90.0, glass))
+   # scene.add(Sphere([210.0, 110.0, 290.0], 90.0, glass))
    # scene.add(Sphere([370.0, 310.0, 390.0], 90.0, white))
 
    scene.add(light_, 1)
@@ -120,8 +120,9 @@ if __name__ == '__main__':
                   obj_index, ray_dir, p, n, front_facing,tri_index)
 
                if mat_type==2:
-                  coefficient *= attenuation  # 衰减
-                  ray_org, ray_dir=out_origin, out_direction.normalized()
+                  ray_org, ray_dir = out_origin, out_direction.normalized()
+                  coefficient *= attenuation*abs(ray_dir.dot(n))  # 衰减
+
                elif front_facing:
                   pdf, ray_out_dir =scene.mix_sample(obj_index,ray_dir,p, n, front_facing)
 
