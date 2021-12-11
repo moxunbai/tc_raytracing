@@ -116,7 +116,7 @@ class Triangle:
         if tria_field.normal_type==3:
             v0, v1, v2 = getVectors(tria_field.vs)
             alpha, beta, gamma = Triangle.computeBarycentric2D(p.x, p.y, p.z, v0, v1, v2)
-            _normal = Triangle.interpolate(alpha, beta, gamma, n0.normalized(), n1.normalized(), n2.normalized(), 1.0).normalized()
+            _normal = Triangle.interpolate(alpha, beta, gamma, n0 , n1 , n2 , 1.0).normalized()
         return _normal
 
     @staticmethod

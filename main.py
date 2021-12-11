@@ -9,8 +9,8 @@ import math
 import random
 
 # switch to cpu if needed
-ti.init(arch=ti.gpu )
-ti.set_logging_level(ti.DEBUG)
+ti.init(arch=ti.gpu,random_seed=int( time()) )
+# ti.set_logging_level(ti.DEBUG)
 
 if __name__ == '__main__':
 
@@ -34,11 +34,11 @@ if __name__ == '__main__':
    image_width = 784
    image_height = int(image_width / aspect_ratio)
    rays = ray.Rays(image_width, image_height)
-   film_pixels = ti.Vector.field(3, dtype=float)
+   film_pixels = ti.Vector.field(3, dtype=ti.f32)
 
    ti.root.dense(ti.ij,
                  (image_width, image_height)).place(film_pixels )
-   samples_per_pixel = 50
+   samples_per_pixel = 100
    max_depth = 10
 
    red = Lambert([0.65, .05, .05])
@@ -48,9 +48,11 @@ if __name__ == '__main__':
 
    glass = Dielectric(1.5)
 
-   moveVec=[385,125,245]
+   moveVec=[285,155,245]
    trans= Translate( makeTransformations(180,math.pi/6,moveVec))
    spot = MeshTriangle("./models/spot/spot_triangulated_good.obj", white ,trans,"./models/spot/spot_texture.png")
+   # spot = MeshTriangle("./models/spot/spot_falling_599.obj", white ,None,"./models/spot/spot_texture.png")
+   # spot = MeshTriangle("./models/spot/spot_falling_599.obj", white ,None )
 
    moveVec2 = [155, 25, 125]
    trans2 = Translate(makeTransformations(910, math.pi, moveVec2))
@@ -121,9 +123,11 @@ if __name__ == '__main__':
 
                if mat_type==2:
                   ray_org, ray_dir = out_origin, out_direction.normalized()
-                  coefficient *= attenuation*abs(ray_dir.dot(n))  # 衰减
+                  # coefficient *= attenuation*abs(ray_dir.dot(n))  # 衰减
+                  coefficient *= attenuation   # 衰减
 
-               elif front_facing:
+               # elif front_facing:
+               else:
                   pdf, ray_out_dir =scene.mix_sample(obj_index,ray_dir,p, n, front_facing)
 
                   if pdf>0.0 and ray_out_dir.norm()>0:
@@ -138,9 +142,9 @@ if __name__ == '__main__':
                   else:
                      col = ti.Vector([0.0, 0.0, 0.0])
                      break
-               else:
-                     col = ti.Vector([0.0, 0.0, 0.0])
-                     break
+               # else:
+               #       col = ti.Vector([0.0, 0.0, 0.0])
+               #       break
          else:
             col = ti.Vector([0.0, 0.0, 0.0])
             break

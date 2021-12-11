@@ -81,7 +81,7 @@ class Lambert(_material):
     def sample_pdf(in_dir , p, n,out_dir):
 
         cosine = n.dot(out_dir)
-        pdf =0.0 if(cosine <= 0) else (cosine / math.pi)
+        pdf =0.0 if(cosine < 0.0) else (cosine / math.pi)
         return  pdf
 
 

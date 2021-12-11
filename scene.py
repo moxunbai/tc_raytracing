@@ -474,20 +474,42 @@ class Scene:
         return coords,normal
 
     @ti.func
+    def hit_light(self,ray_origin,  out_dir,obj):
+
+        t_min=0.001
+        t_max=infinity
+        outward_normal=Vector([0.0, 1.0, 0.0])
+        coords=Vector([0.0, 0.0, 0.0])
+        # t = (k - p.y) / out_dir.y
+        is_hit=True
+        if obj.geo_type==1:
+            is_hit,t, coords, outward_normal, front_facing,hit_tri_index =self.hit_meshs(obj ,ray_origin, out_dir, t_min,t_max)
+ 
+
+        return coords,outward_normal,is_hit
+
+
+    @ti.func
     def pdf_light(self,   p, n, out_dir):
         pdf = 0.0
 
         if self.light_num[None]>0:
            weight = 1.0 / self.light_num[None]
+
            for k in range(self.n):
 
                obj = self.objs_field[k]
                if obj.li_type == 1:
-                   hit, _p, _n, front_facing, index,hit_tri_index = self.hit_all(p, out_dir)
-                   hitobj = self.objs_field[index]
-                   if hit and hitobj.li_type==1 and hitobj.id==obj.id and front_facing:
-                       wo_vec = _p - p
-                       pdf+=weight*(1/obj.area)*wo_vec.norm_sqr()/(abs(wo_vec.normalized().dot(_n))  )
+                   coords, outward_normal, is_hit_light = self.hit_light(p,  out_dir,obj)
+                   if is_hit_light:
+                       wo_vec = coords - p
+                       pdf += weight * wo_vec.norm_sqr() / (abs(wo_vec.normalized().dot(outward_normal)) * obj.area)
+           #         hit, _p, _n, front_facing, index,hit_tri_index = self.hit_all(p, out_dir)
+           #         hitobj = self.objs_field[index]
+           #         if hit and hitobj.li_type==1 and hitobj.id==obj.id and front_facing:
+           #             wo_vec = _p - p
+           #             print(_p)
+           #             pdf+=weight*wo_vec.norm_sqr()/(abs(wo_vec.normalized().dot(_n))*obj.area  )
         return pdf
 
     @ti.func
@@ -507,6 +529,7 @@ class Scene:
            if obj.li_type ==1:
                if i==samplLightIdx:
                    pos, pdf=self.bvh.sample(obj.pos[2])
+
                    coords, normal=self.sample_triangle(k,pos)
 
                    break
@@ -523,13 +546,8 @@ class Scene:
         obj_pdf = 0.0
         pdf = 0.0
 
-        # coords, normal, light_pdf = self.sample_light(ray_direction, p, n, front_facing, index)
-        # wo_vec = coords - p
-        # wo_dir = wo_vec.normalized()
-        # hit, _p, _n, _front_facing, _index = self.hit_all(coords, wo_dir)
-        # # 采样光源的点到原物体上的点之间没有其他物体遮挡
-
         if ti.random()<0.5:
+
             coords, normal, light_pdf = self.sample_light(ray_direction, p, n, front_facing, index)
             wo_vec = coords - p
             wo_dir = wo_vec.normalized()
@@ -538,38 +556,8 @@ class Scene:
             sam_ok, obj_s_out_dir = self.materials.sample(index, ray_direction, p, n, front_facing)
             ray_out_dir =obj_s_out_dir
 
-        # if ti.random()<0.5:
-        #     coords,  normal, light_pdf = self.sample_light(ray_direction, p, n, front_facing, index)
-        #     wo_vec= coords-p
-        #     wo_dir=wo_vec.normalized()
-        #     ray_out_dir=wo_vec.normalized()
-        #     hit, _p, _n, front_facing, _index =self.hit_all(coords,wo_dir)
-        #     #采样光源的点到原物体上的点之间没有其他物体遮挡
-        #     if hit and (_p-coords).norm()<EPSILON:
-        #
-        #         ray_out_dir=wo_dir
-        #         light_pdf_val= wo_vec.norm_sqr()*light_pdf/(abs(wo_dir.dot(_n))  )
-        #         pdf = 0.5 *light_pdf_val
-        #
-        # else:
-        #     sam_ok,obj_s_out_dir = self.materials.sample(index,ray_direction, p, n, front_facing)
-        #     ray_out_dir = obj_s_out_dir
-        #
-        #     # obj_pdf = self.materials.sample_pdf(index, ray_direction, p, n, front_facing, ray_out_dir)
-        #     pdf = 0.5
-        #     # hit, _p, _n, front_facing, _index = self.hit_all(p, obj_s_out_dir)
-        #     # if hit and self.objs_field[_index].li_type != 1:
-        #     #     ray_out_dir=obj_s_out_dir
-        #     #
-        #     #     # obj_pdf = self.materials.sample_pdf(index, ray_direction, p, n, front_facing, ray_out_dir)
-        #     #     pdf =0.5
-
-        # sam_ok, obj_s_out_dir = self.materials.sample(index, ray_direction, p, n, front_facing)
-        # ray_out_dir =obj_s_out_dir
         light_pdf_val=self.pdf_light(p, n,ray_out_dir)
         obj_pdf = self.materials.sample_pdf(index, ray_direction, p, n, front_facing, ray_out_dir)
         pdf=0.5*light_pdf_val+0.5*obj_pdf
-        # pdf= obj_pdf
-        # if pdf>0 and index==0 and n.dot(ray_out_dir)<0:
-        #     print("obj_pdf",obj_pdf)
+
         return pdf,ray_out_dir

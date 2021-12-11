@@ -287,7 +287,7 @@ class BVHS:
         obj_id, left_id, right_id, next_id, area = self.get_full_id(curr)
         p = ti.random() * area
         pdf=1.0/area
-        pos=0.0
+        pos=0
         # normal=ti.Vector([0.0,0.0,0.0])
 
         while curr != -1:
