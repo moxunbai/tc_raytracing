@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
    ti.root.dense(ti.ij,
                  (image_width, image_height)).place(film_pixels )
-   samples_per_pixel = 100
+   samples_per_pixel = 200
    max_depth = 10
 
    red = Lambert([0.65, .05, .05])
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
    moveVec2 = [155, 25, 125]
    trans2 = Translate(makeTransformations(910, math.pi, moveVec2))
-   bunny = MeshTriangle("./models/bunny/bunny.obj", glass,trans2)
+   # bunny = MeshTriangle("./models/bunny/bunny.obj", glass,trans2)
 
    left = MeshTriangle("./models/cornellbox/left.obj", red)
    right = MeshTriangle("./models/cornellbox/right.obj", green)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
    scene.add(left)
    scene.add(spot)
    scene.add(right)
-   scene.add(bunny)
+   # scene.add(bunny)
    # scene.add(shortbox)
    # scene.add(tallbox)
 
@@ -152,24 +152,28 @@ if __name__ == '__main__':
 
 
    @ti.kernel
-   def render():
+   def init_field():
       for i, j in film_pixels:
-         col = ti.Vector.zero(float, 3)
-
-         for k in range(samples_per_pixel):
-            (u, v) = ((i + ti.random()) / image_width, (j + ti.random()) / image_height)
-            ray_org, ray_dir = cam.get_ray(u, v)
-            ray_dir =ray_dir.normalized()
-
-            col += ray_color(ray_org, ray_dir)
-         col /= samples_per_pixel
-
-         # film_pixels[i, j] =  ti.sqrt(col)
-         film_pixels[i, j] = clamp(ti.sqrt(col),0.0,0.999)
+         film_pixels[i, j] = ti.Vector.zero(float, 3)
+   @ti.kernel
+   def cal_film_val():
+      for i, j in film_pixels:
+         val = film_pixels[i, j] / samples_per_pixel
+         film_pixels[i, j] = clamp(ti.sqrt(val), 0.0, 0.999)
+   @ti.kernel
+   def render_once():
+      for i, j in film_pixels:
+         (u, v) = ((i + ti.random()) / image_width, (j + ti.random()) / image_height)
+         ray_org, ray_dir = cam.get_ray(u, v)
+         ray_dir = ray_dir.normalized()
+         film_pixels[i, j] +=ray_color(ray_org, ray_dir)
 
 
    t = time()
    print('starting rendering')
-   render()
+   init_field()
+   for k in range(int(samples_per_pixel)):
+      render_once()
+   cal_film_val()
    print(time() - t)
    ti.imwrite(film_pixels.to_numpy(), 'out.png')

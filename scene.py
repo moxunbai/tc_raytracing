@@ -128,9 +128,10 @@ class Scene:
 
         if  texIdx>0:
 
-            self.texture_datas = ti.Vector.field(n=3, dtype=ti.f32, shape=(texIdx))
-            for i in range(texIdx):
-                self.texture_datas[i]=texture_datas[i]
+            self.texture_datas = ti.Vector.field(n=3, dtype=ti.i32, shape=(texIdx))
+            self.texture_datas.from_numpy(np.asarray(texture_datas))
+            # for i in range(texIdx):
+            #     self.texture_datas[i]=texture_datas[i]
         else:
             self.texture_datas = ti.Vector.field(n=3, dtype=ti.f32, shape=(1))
 
@@ -484,7 +485,7 @@ class Scene:
         is_hit=True
         if obj.geo_type==1:
             is_hit,t, coords, outward_normal, front_facing,hit_tri_index =self.hit_meshs(obj ,ray_origin, out_dir, t_min,t_max)
- 
+
 
         return coords,outward_normal,is_hit
 
