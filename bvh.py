@@ -125,11 +125,9 @@ class BVHNode:
 @ti.data_oriented
 class BVHS:
 
-    root_list=[]
-    # max_total=0
-    total_count=0
     def __init__(self):
-        pass
+        self.root_list = []
+        self.total_count = 0
 
     def add(self,object_list):
         root = BVHNode(object_list, None)
