@@ -146,7 +146,6 @@ class BVHS:
         self.bvh_area = ti.field(ti.f32)
         self.bvh_min = ti.Vector.field(3, dtype=ti.f32)
         self.bvh_max = ti.Vector.field(3, dtype=ti.f32)
-        print('self.total_count',self.total_count)
         ti.root.dense(ti.i, self.total_count).place(self.bvh_obj_id, self.bvh_left_id,
                                          self.bvh_right_id, self.bvh_next_id,
                                          self.bvh_min, self.bvh_max, self.bvh_area)

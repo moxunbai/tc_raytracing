@@ -9,7 +9,7 @@ import math
 import random
 
 # switch to cpu if needed
-ti.init(arch=ti.gpu)
+ti.init(arch=ti.gpu,random_seed=int( time()),advanced_optimization=False)
 # ti.set_logging_level(ti.DEBUG)
 
 if __name__ == '__main__':
@@ -173,10 +173,10 @@ if __name__ == '__main__':
 
 
    t = time()
-   print('starting rendering')
+   print('start rendering')
    init_field()
    for k in range(int(samples_per_pixel)):
       render_once()
    cal_film_val()
    print(time() - t)
-   ti.imwrite(film_pixels.to_numpy(), 'out.png')
+   ti.tools.imwrite(film_pixels.to_numpy(), 'out.png')
