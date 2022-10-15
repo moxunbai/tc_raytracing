@@ -1,6 +1,6 @@
 # tc_raytracing
 执行步骤  
-1、安装依赖  pip install -r requirements.txt
+1、安装依赖  pip install -r requirements.txt  
 2、入口文件./main.py  
 
 
