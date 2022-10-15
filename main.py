@@ -9,7 +9,7 @@ import math
 import random
 
 # switch to cpu if needed
-ti.init(arch=ti.gpu,random_seed=int( time()) )
+ti.init(arch=ti.gpu)
 # ti.set_logging_level(ti.DEBUG)
 
 if __name__ == '__main__':
@@ -36,8 +36,6 @@ if __name__ == '__main__':
    rays = ray.Rays(image_width, image_height)
    film_pixels = ti.Vector.field(3, dtype=ti.f32)
 
-   ti.root.dense(ti.ij,
-                 (image_width, image_height)).place(film_pixels )
    samples_per_pixel = 200
    max_depth = 10
 
@@ -69,6 +67,10 @@ if __name__ == '__main__':
    # world
 
    scene = Scene()
+   
+   
+   ti.root.dense(ti.ij,
+                 (image_width, image_height)).place(film_pixels )
 
    # scene.add(Sphere([210.0, 110.0, 290.0], 90.0, glass))
    # scene.add(Sphere([370.0, 310.0, 390.0], 90.0, white))
@@ -82,7 +84,8 @@ if __name__ == '__main__':
    # scene.add(shortbox)
    # scene.add(tallbox)
 
-   scene.commit()
+   scene.setup_data_cpu()
+   scene.setup_data_gpu()
 
    # camera
    vfrom = Point([278.0, 273.0, -800.0])
@@ -99,8 +102,8 @@ if __name__ == '__main__':
    @ti.func
    def ray_color(ray_org, ray_dir):
 
-      col = ti.Vector([0.0, 0.0, 0.0])
-      coefficient = ti.Vector([1.0, 1.0, 1.0])
+      col = ti.Vector([0.0, 0.0, 0.0], dt=ti.f32)
+      coefficient = ti.Vector([1.0, 1.0, 1.0], dt=ti.f32)
 
       for i in range(max_depth):
 
@@ -140,13 +143,13 @@ if __name__ == '__main__':
 
 
                   else:
-                     col = ti.Vector([0.0, 0.0, 0.0])
+                     col = ti.Vector([0.0, 0.0, 0.0], dt=ti.f32)
                      break
                # else:
                #       col = ti.Vector([0.0, 0.0, 0.0])
                #       break
          else:
-            col = ti.Vector([0.0, 0.0, 0.0])
+            col = ti.Vector([0.0, 0.0, 0.0], dt=ti.f32)
             break
       return col
 

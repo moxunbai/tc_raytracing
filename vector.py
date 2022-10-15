@@ -44,13 +44,13 @@ def random_in_hemisphere(normal):
 #                   r * ti.sin(phi) * ti.sin(theta), r * ti.cos(phi))
 @ti.func
 def rand3():
-    return ti.Vector([ti.random(), ti.random(), ti.random()])
+    return ti.Vector([ti.random(), ti.random(), ti.random()], dt=ti.f32)
 
 @ti.func
 def random_in_unit_sphere():
-    p = 2.0 * rand3() - ti.Vector([1, 1, 1])
+    p = 2.0 * rand3() - ti.Vector([1, 1, 1], dt=ti.f32)
     while p.norm() >= 1.0:
-        p = 2.0 * rand3() - ti.Vector([1, 1, 1])
+        p = 2.0 * rand3() - ti.Vector([1, 1, 1], dt=ti.f32)
     return p
 
 @ti.func

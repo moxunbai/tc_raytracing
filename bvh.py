@@ -137,8 +137,8 @@ class BVHS:
 
         return pos
 
-    def build(self):
-        n_root=len(self.root_list)
+    def setup_data_cpu(self):
+        
         self.bvh_obj_id = ti.field(ti.i32)
         self.bvh_left_id = ti.field(ti.i32)
         self.bvh_right_id = ti.field(ti.i32)
@@ -146,11 +146,15 @@ class BVHS:
         self.bvh_area = ti.field(ti.f32)
         self.bvh_min = ti.Vector.field(3, dtype=ti.f32)
         self.bvh_max = ti.Vector.field(3, dtype=ti.f32)
+        print('self.total_count',self.total_count)
         ti.root.dense(ti.i, self.total_count).place(self.bvh_obj_id, self.bvh_left_id,
                                          self.bvh_right_id, self.bvh_next_id,
                                          self.bvh_min, self.bvh_max, self.bvh_area)
+        
+    def build(self):
+        
         ''' building function. Compress the object list to structure'''
-
+        n_root=len(self.root_list)
 
         # first walk tree and give ids
         def do_walk_bvh(node,start_pos):
@@ -285,8 +289,7 @@ class BVHS:
         obj_id, left_id, right_id, next_id, area = self.get_full_id(curr)
         p = ti.random() * area
         pdf=1.0/area
-        pos=0
-        # normal=ti.Vector([0.0,0.0,0.0])
+        pos=0 
 
         while curr != -1:
             # obj_id, left_id, right_id, next_id = self.bvh.get_full_id(curr)

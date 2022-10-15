@@ -11,14 +11,10 @@ from PIL import Image
 
 
 @ti.func
-def getVectors(matrix_val):
-    # v=ti.Vector.field(n=matrix_val.n,dtype=ti.f32,shape=(3))
-    # vp=[0.0,0.0]
-    # if matrix_val.n==3:
-    #     vp=[0.0,0.0,0.0]
-    v0 = ti.Vector([0.0,0.0,0.0])
-    v1 = ti.Vector([0.0,0.0,0.0])
-    v2 = ti.Vector([0.0,0.0,0.0])
+def getVectors(matrix_val): 
+    v0 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
+    v1 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
+    v2 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
 
     for i in ti.static(range(matrix_val.m)):
         v0[i]=matrix_val[0,i]
@@ -57,17 +53,12 @@ class Triangle:
 
         else:
             self.normal =ti.Matrix(_norms)
-            self.normal_type = 3
-        # print(self.normal)
+            self.normal_type = 3 
         self.box_min = [min(v0[0],v1[0],v2[0],),min(v0[1],v1[1],v2[1],),min(v0[2],v1[2],v2[2],) ]
         self.box_max = [max(v0[0],v1[0],v2[0],),max(v0[1],v1[1],v2[1],),max(v0[2],v1[2],v2[2],)]
         self.box_center = [0.5 * self.box_min[0] + 0.5 * self.box_max[0], 0.5 * self.box_min[1] + 0.5 * self.box_max[1],
                        0.5 * self.box_min[2] + 0.5 * self.box_max[2]]
-        # self.box = bounds3(box_min,box_max)
-        # print(e1)
-        # print(_v0)
-        # print("Triangle aabb min",self.box_min)
-        # print("Triangle aabb max",self.box_max)
+ 
 
 
     @property
@@ -184,8 +175,8 @@ class MeshTriangle:
             self.triangles.append(tria)
         self.box_center = [0.5 * self.box_min[0] + 0.5 * self.box_max[0], 0.5 * self.box_min[1] + 0.5 * self.box_max[1],
                            0.5 * self.box_min[2] + 0.5 * self.box_max[2]]
-        print("box_min",self.box_min)
-        print("box_max",self.box_max)
+        # print("box_min",self.box_min)
+        # print("box_max",self.box_max)
         # print("filename",filename)
         self.n = len(self.triangles)
 

@@ -11,9 +11,9 @@ from bvh import  BVHS
 EPSILON=0.0001
 @ti.func
 def getVectors(matrix_val):
-    v0 = ti.Vector([0.0,0.0,0.0])
-    v1 = ti.Vector([0.0,0.0,0.0])
-    v2 = ti.Vector([0.0,0.0,0.0])
+    v0 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
+    v1 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
+    v2 = ti.Vector([0.0,0.0,0.0],dt=ti.f32)
 
     for i in ti.static(range(matrix_val.m)):
         v0[i]=matrix_val[0,i]
@@ -21,13 +21,40 @@ def getVectors(matrix_val):
         v2[i]=matrix_val[2,i]
     return v0,v1,v2
 
+
+
+vexs = ti.types.matrix(n=3, m=3, dtype=ti.f32)
+texs = ti.types.matrix(n=3, m=2, dtype=ti.f32)
+
+@ti.dataclass
+class TriangleStruct:
+           vs:vexs
+           tx:texs
+           normal:vexs
+           normal_type:ti.i32
+           area=ti.f32
+
+# TriangleStruct = ti.types.struct(
+#      vs=vexs, tx=texs, normal=vexs,normal_type=ti.i32, area=ti.f32
+#  )
+@ti.dataclass
+class SphereStruct:
+    center:vec3f
+    radius:ti.f32
+# SphereStruct = ti.types.struct(
+#      center=vec3f, radius=ti.f32
+#  )
+boxs_type=ti.types.struct(
+     min=vec3f,box_max=vec3f,pos=vec3i,texture_pro=vec3i,has_texture=ti.i32,id=ti.i32,area=ti.f32,geo_type=ti.i32,li_type=ti.i32
+ )
+
 @ti.data_oriented
 class Translate:
     def __init__(self,displacement):
         self.transMatrix=displacement
 
     def makeTrans(self,v,f=1):
-        rst = ti.Vector([v[0], v[1], v[2], f])
+        rst = ti.Vector([v[0], v[1], v[2], f], dt=ti.f32)
         rst= self.transMatrix@rst
         return  [rst[0],rst[1],rst[2]]
 @ti.data_oriented
@@ -37,47 +64,98 @@ class Scene:
         self.objlights = []
         self._light_num = 0
 
+        
+
     def add(self, object,lighttype=0):
         object.id = len(self.objects)
         self.objects.append(object)
         self.objlights.append(lighttype)
         self._light_num+=int(lighttype==1)
 
-    def commit(self):
-        ''' Commit should be called after all objects added.
-            Will compile bvh and materials. '''
+    def setup_data_cpu(self):
         self.n = len(self.objects)
-        spheres=[]
-        trias=[]
-        texture_datas=[]
-        boxs=[]
+        self.spheres_cpu=[]
+        self.trias_cpu=[]
+        self.texture_datas_cpu=[]
+        self.boxs_cpu=[]
+        self.bvh_pos_cpu = []
 
 
 
         self.bvh = BVHS()
         self.bvh_root=self.bvh.add(self.objects)
+        
+        
+        self.triangles = TriangleStruct.field()
+        self.spheres= SphereStruct.field()   
 
-
-        vexs = ti.types.matrix(n=3, m=3, dtype=ti.f32)
-        texs = ti.types.matrix(n=2, m=3, dtype=ti.f32)
-        tria_type = ti.types.struct(
-            vs=vexs, tx=texs, normal=vexs,normal_type=ti.i32, area=ti.f32
-        )
-        sphe_type = ti.types.struct(
-            center=vec3f, radius=ti.f32
-        )
-        boxs_type=ti.types.struct(
-            min=vec3f,box_max=vec3f,pos=vec3i,texture_pro=vec3i,has_texture=ti.i32,id=ti.i32,area=ti.f32,geo_type=ti.i32,li_type=ti.i32
-        )
         self.objs_field = boxs_type.field(shape=(self.n))
         self.materials = Materials(self.n)
         self.light_num = ti.field(ti.i32,shape=())
-        self.light_num[None] = self._light_num
-        triIdx=0
-        texIdx=0
-        sphNum=0
+        
+        self.triIdx=0 
+        self.texIdx=0
+        self.sphNum=0
         # lightNum=0
 
+        for i in range(self.n):
+            obj=self.objects[i]
+            
+            if isinstance(obj,Sphere):
+                self.spheres_cpu.append(obj)
+                # self.objs_field[i].geo_type = 2
+                # self.objs_field[i].pos  = [self.sphNum,0,0]
+                self.sphNum+=1
+
+            if isinstance(obj,MeshTriangle):
+                self.bvh_pos_cpu.append(self.bvh.add(obj.triangles) )
+                self.triIdx += obj.n
+                if obj.tex_width>0: 
+                    for w in range(obj.tex_width):
+                        for h in range(obj.tex_height):
+                            self.texture_datas_cpu.append(obj.texture_data[w,h])
+                    self.texIdx+=obj.tex_width*obj.tex_height
+
+                for tria in obj.triangles:
+                    self.trias_cpu.append(tria)
+            else:
+                 self.bvh_pos_cpu.append(0)       
+    
+        self.bvh.setup_data_cpu()
+        self.nSph=len(self.spheres_cpu)
+        if self.triIdx > 0:
+            print('place triangles',self.triIdx)
+            ti.root.dense(ti.i,self.triIdx).place(self.triangles)
+        else:
+             ti.root.dense(ti.i,1).place(self.triangles)
+             
+        if self.nSph>0:
+             ti.root.dense(ti.i,self.nSph).place(self.spheres)
+        else:
+               ti.root.dense(ti.i,1).place(self.spheres)
+              
+        if  self.texIdx>0:
+            self.texture_datas = ti.Vector.field(n=3, dtype=ti.i32, shape=(self.texIdx))       
+        else:
+            self.texture_datas = ti.Vector.field(n=3, dtype=ti.f32, shape=(1))
+            
+        
+    def setup_data_gpu(self):
+        
+        if self.nSph>0:
+            # self.spheres=SphereStruct.field(shape=(self.nSph))
+            for i in range(self.nSph):
+                self.spheres[i].center = self.spheres_cpu[i].center
+                self.spheres[i].radius = self.spheres_cpu[i].radius
+        # else:
+        #     self.spheres = SphereStruct.field(shape=(1))
+
+
+        self.light_num[None] = self._light_num
+
+        self.triIdx=0
+        self.texIdx=0
+        self.sphNum=0
         for i in range(self.n):
             obj=self.objects[i]
             bmin,bmax=obj.bounding_box
@@ -87,69 +165,48 @@ class Scene:
             self.objs_field[i].area=obj.area
             self.objs_field[i].has_texture=0
             self.materials.set(i,obj.material)
-            # lightNum+=self.objlights[i]
+            
             self.objs_field[i].li_type =self.objlights[i]
             if isinstance(obj,Sphere):
-                spheres.append(obj)
+                
                 self.objs_field[i].geo_type = 2
-                self.objs_field[i].pos  = [sphNum,0,0]
-                sphNum+=1
+                self.objs_field[i].pos  = [self.sphNum,0,0]
+                self.sphNum+=1
 
             if isinstance(obj,MeshTriangle):
-                bvh_pos=self.bvh.add(obj.triangles)
-                self.objs_field[i].pos = [triIdx, 0, bvh_pos]
+                bvh_pos= self.bvh_pos_cpu[i]
+                self.objs_field[i].pos = [self.triIdx, 0, bvh_pos]
                 self.objs_field[i].geo_type = 1
-                triIdx += obj.n
+                self.triIdx += obj.n
                 if obj.tex_width>0:
-                    self.objs_field[i].has_texture = 1
-                    self.objs_field[i].texture_pro=[obj.tex_width,obj.tex_height,texIdx]
-                    for w in range(obj.tex_width):
-                        for h in range(obj.tex_height):
-                            texture_datas.append(obj.texture_data[w,h])
-                    texIdx+=obj.tex_width*obj.tex_height
-
-                for tria in obj.triangles:
-                    trias.append(tria)
-        self.bvh.build()
-
-
-
-        nSph=len(spheres)
-        if nSph>0:
-            self.spheres=sphe_type.field(shape=(nSph))
-            for i in range(nSph):
-                self.spheres[i].center = spheres[i].center
-                self.spheres[i].radius = spheres[i].radius
-        else:
-            self.spheres = sphe_type.field(shape=(1))
-
-
-
-
-        if  texIdx>0:
-
-            self.texture_datas = ti.Vector.field(n=3, dtype=ti.i32, shape=(texIdx))
-            self.texture_datas.from_numpy(np.asarray(texture_datas))
-            # for i in range(texIdx):
-            #     self.texture_datas[i]=texture_datas[i]
-        else:
-            self.texture_datas = ti.Vector.field(n=3, dtype=ti.f32, shape=(1))
-
-        if triIdx > 0:
-            self.triangles = tria_type.field(shape=(triIdx))
-            for i in range(triIdx):
-                preTrias=trias[i]
+                    self.objs_field[i].has_texture = 1 
+                    self.objs_field[i].texture_pro=[obj.tex_width,obj.tex_height,self.texIdx]
+                    self.texIdx+=obj.tex_width*obj.tex_height
+                   
+ 
+    
+        if  self.texIdx>0:
+            # self.texture_datas = ti.Vector.field(n=3, dtype=ti.i32, shape=(self.texIdx))
+            self.texture_datas.from_numpy(np.asarray(self.texture_datas_cpu))
+ 
+        if self.triIdx > 0:
+            # ti.root.dense(ti.i,self.triIdx).place(self.triangles)
+            for i in range(self.triIdx):
+                preTrias=self.trias_cpu[i]
                 self.triangles[i].vs = preTrias.vertices
 
                 self.triangles[i].normal = preTrias.normal
                 if preTrias.texcoords is not None:
-                    self.triangles[i].tx = preTrias.texcoords
+                    # print( '=======-------',i,ti.Matrix(preTrias.texcoords)  )
+                    self.triangles[i].tx = ti.Matrix(preTrias.texcoords) 
+                    # self.triangles[i].from_numpy(np.asarray( preTrias.texcoords))
                 self.triangles[i].normal_type = preTrias.normal_type
 
-
-        del texture_datas
-        del trias
-
+        self.bvh.build()
+        # del texture_datas
+        # del trias
+ 
+           
     def bounding_box(self, i):
         return self.bvh_min(i), self.bvh_max(i)
 
@@ -260,7 +317,7 @@ class Scene:
         root = -1.0
         p = Point([0.0, 0.0, 0.0])
         n = Point([0.0, 0.0, 0.0])
-        t = None
+        t = 0.0
         front_facing = True
         v0, v1, v2 = getVectors(_vx)
         e1=v1 - v0
@@ -313,7 +370,7 @@ class Scene:
     @ti.func
     def hit_triangle(self,tria_id,obj_box,ray_origin, ray_direction, t_min,t_max ):
         tria_start=obj_box.pos[0]
-        hit_tri_index=tria_start+tria_id
+        hit_tri_index=tria_start+tria_id 
         obj=self.triangles[hit_tri_index]
 
         _vx=obj.vs
@@ -323,7 +380,7 @@ class Scene:
         root = -1.0
         p = Point([0.0, 0.0, 0.0])
         n = Point([0.0, 0.0, 0.0])
-        t = None
+        t = 0.0
         front_facing = True
         v0, v1, v2 = getVectors(_vx)
         e1=v1 - v0
@@ -370,7 +427,7 @@ class Scene:
         root = -1.0
         p = Point([0.0, 0.0, 0.0])
         n = Point([0.0, 0.0, 0.0])
-        t = None
+        t = 0.0
         front_facing = True
 
         if hit:
