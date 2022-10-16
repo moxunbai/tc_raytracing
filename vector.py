@@ -16,7 +16,7 @@ WHITE = Color(1.0, 1.0, 1.0)
 BLUE = Color(0.5, 0.7, 1.0)
 RED = Color(1.0, 0.0, 0.0)
 
-infinity = float("inf")
+infinity = 999999.0
 
 @ti.func
 def random_in_unit_disk():
